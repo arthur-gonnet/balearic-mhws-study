@@ -1,0 +1,8 @@
+.vscode
+
+Datos/*/**
+!Datos/*/*.md
+
+file_tree.txt
+
+**/__pycache__/
