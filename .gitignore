@@ -1,12 +1,8 @@
 .vscode
-Codigos_OLD
 
-Datos/**
-!Datos/**/
-!Datos/**/*.md
-Datos/**/*.nc.info.md
+Datos/*/**
+!Datos/*/*.md
 
 file_tree.txt
-file_tree_OLD.txt
 
 **/__pycache__/
