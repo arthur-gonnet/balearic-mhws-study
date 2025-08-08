@@ -659,7 +659,7 @@ def load_nc_to_dataset(
     if name_dict:
         ds = ds.rename(name_dict)
 
-    # Apply region slector
+    # Apply region selector
     if region_selector == 'balears':
         lon_selector = slice(-0.9, 5.1)
         lat_selector = slice(37.6, 41.1)

@@ -231,3 +231,7 @@ def not_null(*args):
             return arg
     
     return
+
+
+def bold(text):
+    return r"$\bf{" + text.replace(' ', ' \ ') + "}$"

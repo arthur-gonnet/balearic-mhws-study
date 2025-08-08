@@ -74,7 +74,8 @@ def subplot(
         fig_vmax: float = None,
         fig_cmap: str = None,
         fig_cbar_unit: str = None,
-        fig_cbar_ticks: int | tuple[float, float] | list[float] = None,
+        fig_cbar_ticks: int | tuple[float, float] | list[float] | list[list[float], list[str]] = None,
+        fig_cbar_orientation: str = 'vertical',
         fig_cbar_pad: float = 0.005,
         fig_cbar_fraction: float = 0.025,
 
@@ -206,7 +207,7 @@ def subplot(
             row = (pos-1) // ncols
             col = (pos-1) % ncols
 
-            # The projection is not the same if it is a map or not
+            # Creating the subplot ax, using projection or not depending if it is a map or not
             if fig_is_a_map:
                 projection_mode = ccrs.PlateCarree()
                 ax = fig.add_subplot(nrows, ncols, pos, projection=projection_mode)
@@ -218,12 +219,13 @@ def subplot(
                 soft_override_value(subplot_setting, "vmin", fig_vmins[row])
                 soft_override_value(subplot_setting, "vmax", fig_vmaxs[row])
                 
+                # If it is the last column of the row, displays the colorbar of the row
                 if col == ncols-1:
                     soft_add_values(subplot_setting, {"add_cbar": True})
                     soft_override_value(subplot_setting, "cbar_shrink", fig_cbar_fraction)
                     soft_override_value(subplot_setting, "cbar_pad", fig_cbar_pad)
                     soft_override_value(subplot_setting, "cbar_unit", fig_cbar_unit)
-                    
+                
                 else:
                     soft_add_values(subplot_setting, {"add_cbar": False})
             
@@ -238,38 +240,51 @@ def subplot(
             soft_override_value(subplot_setting, "cmap", fig_cmap)
             soft_override_value(subplot_setting, "fontsize", fig_fontsize)
 
+            # Finally, plotting onto the axe
             plotting_func(fig=fig, ax=ax, **(subplot_setting))
         
+        # Add figure title
         if fig_title:
             fig.suptitle(fig_title)
 
+        # If the colorbar is at the figure scope, displays it 
         if fig_cbar and not fig_cbar_row:
             norm = mcolors.Normalize(vmin=fig_vmin, vmax=fig_vmax)
             mappable = cm.ScalarMappable(norm=norm, cmap=fig_cmap)
 
             opts = dict(
-                fraction=fig_cbar_fraction, pad=fig_cbar_pad,
+                fraction=fig_cbar_fraction, pad=fig_cbar_pad, orientation=fig_cbar_orientation
             )
+
+            fig_cbar_tick_labels = None
             
             if fig_cbar_ticks:
+                if isinstance(fig_cbar_ticks, list) and isinstance(fig_cbar_ticks[0], list):
+                    fig_cbar_ticks, fig_cbar_tick_labels = fig_cbar_ticks
+                    
+
                 cbar_locator = get_locator_from_ticks(fig_cbar_ticks)
                 opts["ticks"] = cbar_locator
-            
-            opts['orientation'] = 'horizontal'
 
-            fig.colorbar(mappable, label=fig_cbar_unit, ax=fig.axes, **opts)
+            cbar = fig.colorbar(mappable, label=fig_cbar_unit, ax=fig.axes, **opts)
 
+            if fig_cbar_tick_labels:
+                cbar.ax.set_xticklabels(fig_cbar_tick_labels)
+        
+        # Align the y labels
         fig.align_ylabels()
 
         # If saving the figure is asked
         if save_plot:
             fig.savefig(save_path, format="png", dpi=dpi)
         
+        # If showing the figure is asked
         if show_plots:
             plt.show()
             plt.clf()
             plt.close("all")
     
+    # If the figure is not to be shown nor to be saved, returning it
     if not show_plots and not save_plot:
         return fig
 
@@ -303,8 +318,8 @@ def plot_map(
     ylabel_pad = -0.22,
 
     # Parameters of graph
-    extent: list[float] | str = "balears",
-    aspect: float = 1.29, # Best fit
+    extent: list[float] | str | None = "balears",
+    aspect: float | None = 1.29, # Best fit
     # aspect: float = 1.3,
     # aspect: float = 1/np.sin(np.pi/180.*39), # Wrong but don't know why
     cmap = "managua",
@@ -370,34 +385,31 @@ def plot_map(
     #     All other arguments are passed to :class:`matplotlib.figure.Figure.subplots`
     """
 
+    # Apply fontsize globally
     with plt.rc_context({'font.size': fontsize}):
+        # Define the projection mode for the map
         projection_mode = ccrs.PlateCarree()
 
         # If the figure is not configured, initialise a new one
         if fig is None:
             fig = plt.figure(figsize=figsize, dpi=figdpi, layout='tight')
         
+        # If the axe is not configured, initialise a new one
         if ax is None:
             ax = fig.add_subplot(111, projection=projection_mode)
-        
-        # Changing number of ticks
-        # xticks = ax.get_xticks()
-        # ax.set_xticks(xticks[::len(xticks) // 4]) # set new tick positions
-        # ax.tick_params(axis='x', rotation=30) # set tick rotation
-        # ax.margins(x=0) # set tight margins
-        # ax.locator_params('both', nbins=2)
-        # ax.set_xticks(xticks)
 
-
+        # Apply region selector
         if extent == "med":
             extent = [-6, 36.33, 30, 46]
         elif extent == "balears":
             extent = [-1, 5, 37.7, 41]
 
-        # Choosing the plot extent and aspect
-        if not extent is None:
+        # Defines the plot extent
+        if extent:
             ax.set_extent(extent, crs=projection_mode)
-        if not aspect is None:
+
+        # Defines the plot aspect
+        if aspect:
             ax.set_aspect(aspect) # This is a trick for performance sake, giving faster results, it imitates Mercator projection in 10sec vs 60sec
         
         # Change the grid settings and the coordinates labels
@@ -407,25 +419,17 @@ def plot_map(
         gl.bottom_labels = bottom_labels
         gl.left_labels = left_labels
         
+        # Define the x ticks
         if xticks:
-            if isinstance(xticks, int):
-                xlocator = MaxNLocator(nbins=xticks)
-            else:
-                xlocator = MultipleLocator(base=xticks[0], offset=xticks[1])
+            xlocator = get_locator_from_ticks(xticks)
             gl.xlocator = xlocator
         
+        # Define the y ticks
         if yticks:
-            if isinstance(yticks, int):
-                ylocator = MaxNLocator(nbins=yticks)
-            else:
-                ylocator = MultipleLocator(base=yticks[0], offset=yticks[1])
+            ylocator = get_locator_from_ticks(yticks)
             gl.ylocator = ylocator
-        
-        # gl.xlabel_style = {'size': 55, 'color': 'black'}
-        # gl.ylabel_style = {'size': 55, 'color': 'black'}
-        # ax.grid()
 
-        # Plot the variable
+        # Option for plotting
         pcm_opts = {
             "transform": projection_mode,
             "cmap": cmap,
@@ -434,21 +438,22 @@ def plot_map(
             # Extra
             # "shading": "nearest"
         }
-
+        
+        # Changes 0 into nans if asked
         if zero_to_nan:
             variable_data = variable_data.where(variable_data != 0, np.nan)
 
+        # If vlims are given into tuple, split it
         if vlim:
-            vmin = vlim[0]
-            vmax = vlim[1]
+            vmin, vmax = vlim
 
-        if vmin is None:
-            vmin = None if np.isnan(variable_data).all() else np.nanmin(variable_data)
+        # if vmin is None:
+        #     vmin = None if np.isnan(variable_data).all() else np.nanmin(variable_data)
         
-        if vmax is None:
-            vmax = None if np.isnan(variable_data).all() else np.nanmax(variable_data)
-            # vmin, vmax = nice_range(vmin, vmax)
+        # if vmax is None:
+        #     vmax = None if np.isnan(variable_data).all() else np.nanmax(variable_data)
 
+        # Plotting the data!!
         pcm = ax.pcolormesh(lon, lat, variable_data, zorder=-1, shading="auto", vmin=vmin, vmax=vmax, **pcm_opts)
         ax.set_title(title, fontsize=fontsize*fontsize_title)
 
@@ -463,12 +468,11 @@ def plot_map(
 
         # plt.plot([lon0, lon1], [lat0, lat1], lw=5, c="r") # Transect Ibiza Channel
 
+        # If ylabel is asked, adding it as so
         if ylabel:
             ax.text(ylabel_pad, 0.55, ylabel, va='bottom', ha='center',
                 rotation='vertical', rotation_mode='anchor', fontsize=fontsize*fontsize_title,
                 transform=ax.transAxes)
-            # print("ylabel", ylabel)
-            # ax.set_ylabel(ylabel)
 
         # Shows the isolines on the plots
         if contours_levels:
@@ -485,7 +489,6 @@ def plot_map(
             contours = ax.contour(lon, lat, variable_data, levels=contours_levels, colors='k', linewidths=1, alpha=0.6, transform=projection_mode, zorder=-1)
             ax.clabel(contours, levels=contours_levels, colors='k', fontsize=contours_labels_fontsize, zorder=-1)
 
-
         # Add colorbar
         if add_cbar:
             opts = dict(
@@ -493,10 +496,7 @@ def plot_map(
             )
             
             if cbar_ticks:
-                if isinstance(cbar_ticks, int):
-                    cbar_locator = MaxNLocator(nbins=cbar_ticks)
-                else:
-                    cbar_locator = MultipleLocator(base=cbar_ticks[0], offset=cbar_ticks[1])
+                cbar_locator = get_locator_from_ticks(cbar_ticks)
                 opts["ticks"] = cbar_locator
 
             cbar = fig.colorbar(pcm, ax=ax, **opts)
@@ -506,21 +506,23 @@ def plot_map(
 
 
         # Additions of coastlines and land
-        ax.coastlines(resolution="10m")# resolution="10m", color="k")       # Coastlines
-        ax.add_feature(cfeature.LAND)# color="gray")        # Land
+        ax.coastlines(resolution="10m")       # Coastlines
+        ax.add_feature(cfeature.LAND)        # Land
         # ax.add_feature(cfeature.BORDERS, alpha=0.2)
-
 
         # If saving the figure is asked
         if save_plot:
             fig.savefig(save_path, format="png", dpi=figdpi)
         
+        # If showing the figure is asked
         if show_plots:
             plt.show()
             plt.clf()
             plt.close("all")
     
-    return fig, ax
+    # If the figure is not to be shown nor to be saved, returning it
+    if not show_plots and not save_plot:
+        return fig, ax
 
 def plot_transect(
     # Parameter of data
@@ -569,42 +571,39 @@ def plot_transect(
 
     show_plots: bool = False,
 ):
-    """Creates a transect
+    """
+    Creates a transect
 
     """
 
+    # Sometimes, data is given transposed, then transposing it makes it work
     if variable_data.shape != (len(depth), len(abscissa)):
-        variable_data = variable_data.T  # Transpose if needed
+        variable_data = variable_data.T
 
+    # Apply fontsize globally
     with plt.rc_context({'font.size': fontsize}):
-
         # If the figure is not configured, initialise a new one
-        if fig is None or ax is None:
-            fig = plt.figure(figsize=figsize, layout='tight', dpi=figdpi)
+        if fig is None:
+            fig = plt.figure(figsize=figsize, dpi=figdpi, layout='tight')
+        
+        # If the axe is not configured, initialise a new one
+        if ax is None:
             ax = fig.add_subplot(111)
 
         # Change the grid settings and the coordinates labels
         ax.grid(True, ls=':', alpha=0.7)
         
+        # Define the x ticks
         if xticks:
-            if isinstance(xticks, int):
-                xlocator = MaxNLocator(nbins=xticks)
-            elif isinstance(xticks, tuple):
-                xlocator = MultipleLocator(base=xticks[0], offset=xticks[1])
-            elif isinstance(xticks, list):
-                xlocator = FixedLocator(xticks)
+            xlocator = get_locator_from_ticks(xticks)
             ax.xaxis.set_major_locator(xlocator)
         
+        # Define the y ticks
         if yticks:
-            if isinstance(yticks, int):
-                ylocator = MaxNLocator(nbins=yticks)
-            elif isinstance(yticks, tuple):
-                ylocator = MultipleLocator(base=yticks[0], offset=yticks[1])
-            elif isinstance(yticks, list):
-                ylocator = FixedLocator(yticks)
+            ylocator = get_locator_from_ticks(yticks)
             ax.yaxis.set_major_locator(ylocator)
 
-        # Plot the variable
+        # Option for plotting
         pcm_opts = {
             "cmap": cmap,
             "norm": norm,
@@ -613,28 +612,38 @@ def plot_transect(
             # "shading": "nearest"
         }
 
+        # Changes 0 into nans if asked
         if zero_to_nan:
             variable_data = variable_data.where(variable_data != 0, np.nan)
 
-        if vmin is None:
-            vmin = None if np.isnan(variable_data).all() else np.nanmin(variable_data)
+        # if vmin is None:
+        #     vmin = None if np.isnan(variable_data).all() else np.nanmin(variable_data)
         
-        if vmax is None:
-            vmax = None if np.isnan(variable_data).all() else np.nanmax(variable_data)
-            vmin, vmax = nice_range(vmin, vmax)
+        # if vmax is None:
+        #     vmax = None if np.isnan(variable_data).all() else np.nanmax(variable_data)
+        #     vmin, vmax = nice_range(vmin, vmax)
 
+        # Plotting the data!!
         pcm = ax.pcolormesh(abscissa, depth, variable_data, shading="auto", vmin=vmin, vmax=vmax, **pcm_opts)
         ax.set_title(title)
 
+        # Invert the y axis, as depth should be given in positive values
         ax.invert_yaxis()
         
-        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f}m"))
-
+        # Format the depth values to include meters
+        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.0f} m"))
+        
+        # If plotting along an horizontal basis
         if not abscissa_is_time:
+            # If abscissa is given in longitudinal degrees
             if along_lon:
                 ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: f"{abs(x)}°{'W' if x < 0 else '' if x == 0 else 'E'}"))
+
+            # If abscissa is given in latitudinal degrees
             elif along_lat:
                 ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: f"{abs(x)}°{'S' if x < 0 else '' if x == 0 else 'N'}"))
+
+            # Otherwise, abscissa should be given in km
             else:
                 ax.xaxis.set_major_formatter(StrMethodFormatter("{x:.0f}km"))
             
@@ -665,13 +674,14 @@ def plot_transect(
                     ha='right', va='bottom', transform=ax.transAxes
                 )
 
+        # Hide labels on axis if not necessary
         if not bottom_labels:
             ax.set_xticklabels([])
         if not left_labels:
             ax.set_yticklabels([])
 
         # Shows the isolines on the plots
-        if not contours_levels is None:
+        if contours_levels:
             if isinstance(contours_levels, int):
                 if vmin is None:
                     vmin = np.nanmin(variable_data)
@@ -705,10 +715,15 @@ def plot_transect(
         if save_plot:
             fig.savefig(save_path, format="png", dpi=dpi)
         
+        # If showing the figure is asked
         if show_plots:
             plt.show()
             plt.clf()
             plt.close("all")
+    
+    # If the figure is not to be shown nor to be saved, returning it
+    if not show_plots and not save_plot:
+        return fig, ax
 
 def plot_vertical_mean(
         # Parameter of data
@@ -825,20 +840,18 @@ def plot_vertical_mean(
         The loaded CMEMS-SST dataset with optional spatio-temporal subsetting.
     """
 
-
+    # Apply fontsize globally
     with plt.rc_context({'font.size': fontsize}):
-        # Plotting
-        if fig is None or ax is None:
+        # If the figure is not configured, initialise a new one
+        if fig is None:
             fig = plt.figure(figsize=figsize, dpi=figdpi, layout='tight')
+        
+        # If the axe is not configured, initialise a new one
+        if ax is None:
             ax = fig.add_subplot(111)
         
         # Should handle single dataset plotting
         if isinstance(vars, dict):
-            first_var = vars[next(iter(vars))]
-
-            if unit == None and isinstance(first_var, xr.DataArray) and first_var.attrs.get("unit"):
-                unit = first_var.attrs.get("unit")
-            
             for var in vars:
                 opts_args = {}
 
@@ -985,12 +998,14 @@ def plot_timeserie(
         yticks_formatter = None,
         bottom_labels = True,
         left_labels = True,
-        legend: bool = True,
+        legend: bool | dict = True,
 
         # Parameter for saving the figure
         show_plots: bool = False,
         save_plot: bool = False,
         save_path: str = "",
+
+        **kwargs
 ):
     """
     Plots a time serie with the defined settings.
@@ -1181,7 +1196,12 @@ def plot_timeserie(
 
         if grid: ax.grid(alpha=0.5)
         if grid: ax.grid(which="minor", alpha=0.3, ls="--")
-        if labels and legend: ax.legend()
+        if labels and legend:
+            if isinstance(legend, dict):
+                ax.legend(**legend)
+
+            else:
+                ax.legend()
 
         if show_plots:
             plt.show()
@@ -1194,6 +1214,242 @@ def plot_timeserie(
 def plot_mhw_timeserie():
     pass
 
+
+def plot_bars(
+        # Parameter of data
+        depths: xr.DataArray,
+        vars: dict[str, xr.DataArray],
+        stds: dict[str, xr.DataArray] = None,
+        # labels: dict[str, str] | str | None = 'auto',
+        colors: dict[str, str] | str | None = None,
+        ls: dict[str, str] | str | None = None,
+        nans_to_zero: bool = False,
+
+        # Parameter of figure
+        fig: plt.Figure | None = None,
+        ax: plt.Axes | None = None,
+        figsize: tuple[int, int] = (10, 5),
+        figdpi = 100,
+
+        # Parameter of text
+        fontsize: int = 14,
+        title: str | None = None,
+        unit: str | None = None,
+
+        # Parameters of graph
+        grid: bool = True,
+        xlim: tuple[int|None, int|None] = (None, None),
+        xticks = None,
+        xticks_minor = None,
+        yticks = None,
+        yticks_minor = None,
+        xticks_formatter = None,
+        bottom_labels = True,
+        left_labels = True,
+        top_labels = False,
+        legend: bool = True,
+        ylabel = None,
+
+        # Parameter for saving the figure
+        show_plots: bool = False,
+        save_plot: bool = False,
+        save_path: str = "",
+
+        **kwargs
+):
+    bars_pad = 2
+    
+    if not colors:
+        colors = {
+            var: f'C{i}'
+            for i, var in enumerate(vars)
+        }
+
+    
+    # Apply fontsize globally
+    with plt.rc_context({'font.size': fontsize}):
+        # If the figure is not configured, initialise a new one
+        if fig is None:
+            fig = plt.figure(figsize=figsize, dpi=figdpi, layout='tight')
+        
+        # If the axe is not configured, initialise a new one
+        if ax is None:
+            ax = fig.add_subplot(111)
+        
+        last_tick = 0
+        ticks_pos = []
+
+        should_define_xlim = xlim == (None, None)
+
+        for depth in depths:
+            vars_displayed = 0
+
+            for var in vars:
+                value = vars[var].sel(depth=depth)
+                
+                # If all nan, return
+                if value.isnull().all():
+                    continue
+
+                opts_args = {}
+
+                # Apply the required color
+                if colors:
+                    if isinstance(colors, dict) and var in colors:
+                        opts_args["color"] = colors[var]
+                    elif not isinstance(colors, dict):
+                        opts_args["color"] = colors
+                
+                # Apply the required line style
+                if ls:
+                    if isinstance(ls, dict) and var in ls:
+                        opts_args["ls"] = ls[var]
+                    elif not isinstance(ls, dict):
+                        opts_args["ls"] = ls
+                
+                # Apply labels
+                # if labels == 'auto':
+                #     opts_args["label"] = var
+                # elif labels and var in labels:
+                #     opts_args["label"] = labels[var]
+                
+                # Apply nan filter
+                if nans_to_zero:
+                    vars[var] = np.nan_to_num(vars[var])
+                
+                # Choose right time array
+                if isinstance(depths, dict):
+                    depths_ = depths[var]
+                else:
+                    depths_ = depths
+
+                if stds:
+                    std = stds[var].sel(depth=depth)
+                    opts_args['xerr'] = std
+                    # opts_args['ecolor'] = 'k'
+                    opts_args['capsize'] = 3
+                    opts_args['error_kw'] = {
+                        'alpha': 0.4,
+                    }
+                
+                # Finally, plot the line
+                # ax.plot(vars[var], depths_, **opts_args)
+                ax.barh(
+                    last_tick + vars_displayed + 0.5,
+                    value,
+                    **opts_args
+                )
+
+                # if stds:
+                #     ax.barh(
+                #         last_tick + vars_displayed + 0.5,
+                #         std,
+                #         **opts_args
+                #     )
+
+                if should_define_xlim:
+                    if xlim == (None, None):
+                        xlim = (np.nanmin(value), np.nanmax(value))
+                    else:
+                        xlim = (min(np.nanmin(value), xlim[0]), max(np.nanmax(value), xlim[1]))
+                    
+                    if stds:
+                        std = stds[var].sel(depth=depth)
+                        xlim = (min(np.nanmin(value-std), xlim[0]), max(np.nanmax(value+std), xlim[1]))
+
+                vars_displayed += 1
+
+            ticks_pos.append(last_tick + vars_displayed/2)
+            last_tick += vars_displayed + bars_pad
+        
+        if should_define_xlim:
+            vmin, vmax = xlim
+            pad = (vmax - vmin)*0.1
+
+            vmin = 0 if vmin*(vmin-pad)<=0 else vmin-pad
+            vmax = 0 if vmax*(vmax+pad)<=0 else vmax+pad
+
+            xlim = (vmin, vmax)
+        
+        # if ylim == (None, None):
+        #     if isinstance(depths, dict):
+        #         ylim = (
+        #             np.nanmin([np.nanmin(depths[name]) for name in depths]),
+        #             np.nanmax([np.nanmax(depths[name]) for name in depths])
+        #         )
+            
+        #     else:
+        #         ylim = (np.nanmin(depths), np.nanmax(depths))
+        
+        # Set manually the abscissa ticks
+        if xticks:
+            xlocator = get_locator_from_ticks(xticks)
+            ax.xaxis.set_major_locator(xlocator)
+
+        if xticks_minor:
+            xlocator = get_locator_from_ticks(xticks_minor, which="minor")
+            ax.xaxis.set_minor_locator(xlocator)
+
+        if xticks_formatter:
+            ax.xaxis.set_major_formatter(xticks_formatter)
+        
+        # Set manually the ordinate ticks
+        # if yticks:
+        #     ylocator = get_locator_from_ticks(yticks)
+        #     ax.yaxis.set_major_locator(ylocator)
+
+        # if yticks_minor:
+        #     ylocator = get_locator_from_ticks(yticks_minor, which="minor")
+        #     ax.yaxis.set_minor_locator(ylocator)
+        
+        ticks_pos = np.array(ticks_pos)
+
+        idx = []
+
+        if isinstance(yticks, int):
+            idx = range(0, len(ticks_pos), yticks)
+
+        ax.set_yticks(ticks_pos, minor=True)
+        ax.set_yticks(ticks_pos[idx], labels=[f"{depth:.0f} m" for depth in depths[idx]])
+
+
+        # if not bottom_labels:
+        #     ax.set_xticklabels([])
+        
+        # if not left_labels:
+        #     ax.set_yticklabels([])
+        # else:
+        # if left_labels:
+        #     ax.set_ylabel("Depth [m]")
+
+        ax.tick_params(which='both', top=top_labels, labeltop=top_labels, bottom=bottom_labels, labelbottom=bottom_labels, left=left_labels, labelleft=left_labels)
+        ax.tick_params(which='both', length=0)
+
+        # Change the ax color
+        # for spine in ax.spines.values():
+        #     spine.set_edgecolor('green')
+
+        ax.set_title(title)
+        if unit:
+            ax.set_xlabel(f"[{unit}]")
+        
+        ax.set_ylabel(ylabel)
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(-bars_pad/2, last_tick-bars_pad/2)
+        ax.invert_yaxis()
+
+
+        if grid: ax.grid(alpha=0.5)
+        if grid: ax.grid(which="minor", alpha=0.3, ls="--")
+        # if labels and legend: ax.legend()
+
+        if show_plots:
+            plt.show()
+            plt.clf()
+            plt.close("all")
+    
+    return fig, ax
 
 def add_colorbar(
     fig: plt.Figure,
@@ -1223,15 +1479,6 @@ def add_colorbar(
 
     if cbar_ticks:
         cbar_locator = get_locator_from_ticks(cbar_ticks)
-        # if isinstance(cbar_ticks, int):
-        #     cbar_locator = MaxNLocator(nbins=cbar_ticks)
-        # elif isinstance(cbar_ticks, tuple):
-        #     if len(cbar_ticks) == 2:
-        #         cbar_locator = MultipleLocator(base=cbar_ticks[0], offset=cbar_ticks[1])
-        #     else:
-        #         cbar_locator = MultipleLocator(base=cbar_ticks[0])
-        # elif isinstance(cbar_ticks, list):
-        #     cbar_locator = FixedLocator(cbar_ticks)
         opts["ticks"] = cbar_locator
 
     cbar = fig.colorbar(mappable, ax=ax, **opts, **kwargs)
