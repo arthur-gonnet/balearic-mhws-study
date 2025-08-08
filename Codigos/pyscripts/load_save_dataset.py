@@ -53,7 +53,7 @@ datos_location = os.path.join(codigos_location, '..', 'Datos')
 
 
 # USER INPUT - Bathy dataset path
-bathy_GEBCO_path    = os.path.join(datos_location, 'bathymetry', 'Bathymetry_GEBCO_2023_IBERIAN.nc')
+bathy_GEBCO_path       = os.path.join(datos_location, 'bathymetry', 'Bathymetry_GEBCO_2023_IBERIAN.nc')
 bathy_MEDREA_path      = os.path.join(datos_location, 'bathymetry', 'Bathymetry_MEDREA_006_004_mask_bathy_BalearicIslands.nc')
 bathy_MEDREA_med_path  = os.path.join(datos_location, 'bathymetry', 'Bathymetry_MEDREA_006_004_mask_bathy.nc')
 

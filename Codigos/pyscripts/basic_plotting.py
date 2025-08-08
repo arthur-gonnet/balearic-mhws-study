@@ -1221,8 +1221,9 @@ def plot_bars(
         vars: dict[str, xr.DataArray],
         stds: dict[str, xr.DataArray] = None,
         # labels: dict[str, str] | str | None = 'auto',
-        colors: dict[str, str] | str | None = None,
-        ls: dict[str, str] | str | None = None,
+        colors: dict[str, str] | str = None,
+        ls: dict[str, str] | str = None,
+        hatch: dict[str, str] | str = None,
         nans_to_zero: bool = False,
 
         # Parameter of figure
@@ -1249,6 +1250,7 @@ def plot_bars(
         top_labels = False,
         legend: bool = True,
         ylabel = None,
+        bars_pad = 2,
 
         # Parameter for saving the figure
         show_plots: bool = False,
@@ -1257,7 +1259,6 @@ def plot_bars(
 
         **kwargs
 ):
-    bars_pad = 2
     
     if not colors:
         colors = {
@@ -1307,6 +1308,17 @@ def plot_bars(
                     elif not isinstance(ls, dict):
                         opts_args["ls"] = ls
                 
+                # Apply the required line style
+                if hatch:
+                    if isinstance(hatch, dict) and var in hatch:
+                        if isinstance(hatch[var], dict) and depth in hatch[var]:
+                            opts_args["hatch"] = hatch[var][depth]
+                        else:
+                            opts_args["hatch"] = hatch[var]
+                        
+                    elif not isinstance(hatch, dict):
+                        opts_args["hatch"] = hatch
+                
                 # Apply labels
                 # if labels == 'auto':
                 #     opts_args["label"] = var
@@ -1318,10 +1330,10 @@ def plot_bars(
                     vars[var] = np.nan_to_num(vars[var])
                 
                 # Choose right time array
-                if isinstance(depths, dict):
-                    depths_ = depths[var]
-                else:
-                    depths_ = depths
+                # if isinstance(depths, dict):
+                #     depths_ = depths[var]
+                # else:
+                #     depths_ = depths
 
                 if stds:
                     std = stds[var].sel(depth=depth)
@@ -1334,11 +1346,17 @@ def plot_bars(
                 
                 # Finally, plot the line
                 # ax.plot(vars[var], depths_, **opts_args)
-                ax.barh(
+                a=ax.barh(
                     last_tick + vars_displayed + 0.5,
                     value,
                     **opts_args
                 )
+
+                for bc in a:
+                    import matplotlib.colors as c
+                    bc._hatch_color = c.to_rgba("w")
+                    bc.stale = True
+
 
                 # if stds:
                 #     ax.barh(
@@ -1404,7 +1422,7 @@ def plot_bars(
         
         ticks_pos = np.array(ticks_pos)
 
-        idx = []
+        idx = range(len(ticks_pos))
 
         if isinstance(yticks, int):
             idx = range(0, len(ticks_pos), yticks)
