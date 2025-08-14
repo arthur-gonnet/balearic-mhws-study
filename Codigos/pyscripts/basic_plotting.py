@@ -108,7 +108,7 @@ def subplot(
         'func': the plotting function to plot on the desired axe.
         ...: all the arguments to be passed to the plotting function.
 
-        Note : if using a colorbar, the displayed data show be named 'variable_data'.
+        Note : if using a colorbar, the displayed data show be named 'data'.
     
     pad_subplots: tuple[float, float], optional
         This option adjust the padding existing between the subplots. Uses a relative unit.
@@ -170,10 +170,10 @@ def subplot(
     # If adding a figure colorbar, compute the range of it using data of whole figure
     if fig_cbar and not fig_cbar_row:
         if fig_vmin is None:
-            fig_vmin = np.nanmin([np.nanmin(subplot_setting['variable_data']) for subplot_setting in subplots_settings])
+            fig_vmin = np.nanmin([np.nanmin(subplot_setting['data']) for subplot_setting in subplots_settings])
         
         if fig_vmax is None:
-            fig_vmax = np.nanmax([np.nanmax(subplot_setting['variable_data']) for subplot_setting in subplots_settings])
+            fig_vmax = np.nanmax([np.nanmax(subplot_setting['data']) for subplot_setting in subplots_settings])
             
     # Apply fontsize globally
     with plt.rc_context({'font.size': fig_fontsize}):
@@ -192,8 +192,8 @@ def subplot(
             fig_vmaxs = []
 
             for row in range(nrows):
-                vmin = np.nanmin([np.nanmin(subplot_setting['variable_data']) for subplot_setting in subplots_settings if (subplot_setting['pos']-1)//ncols == row])
-                vmax = np.nanmax([np.nanmax(subplot_setting['variable_data']) for subplot_setting in subplots_settings if (subplot_setting['pos']-1)//ncols == row])
+                vmin = np.nanmin([np.nanmin(subplot_setting['data']) for subplot_setting in subplots_settings if (subplot_setting['pos']-1)//ncols == row])
+                vmax = np.nanmax([np.nanmax(subplot_setting['data']) for subplot_setting in subplots_settings if (subplot_setting['pos']-1)//ncols == row])
                 
                 fig_vmins.append(vmin)
                 fig_vmaxs.append(vmax)
