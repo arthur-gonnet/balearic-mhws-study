@@ -27,9 +27,10 @@ The code here is meant to compute MHW metrics from temperature data and produce 
  1. Make sure to have correctly setup the Python environment by running `01_check_packages.ipynb`:
 
 > - Python 3.10+
-> - **Data** : copernicusmarine
-> - **Computation**: numpy, xarray, dask, scipy
-> - **Visualisation**: matplotlib, cartopy, geopy, shapely, cmocean, roman, pymannkendall
+> - **Scientific stack**: numpy, xarray, dask, scipy
+> - **Plotting**: matplotlib, cartopy, geopy, shapely, cmocean, roman
+> - **Statistics**: pymannkendall
+> - **Dataset downloading** : copernicusmarine
 > - **Development Environment**: Jupyter Notebooks, VS Code
 
  2. Make sure to have correctly downloaded the required data by running `02_download_data.ipynb`.
@@ -44,6 +45,6 @@ The code here is meant to compute MHW metrics from temperature data and produce 
 Double-check that the `Data/` folder matches the required structure. If the structure is changed, update the paths in `load_save_dataset.py`.
 
 **> I get errors with specific packages.** <br>
-Run `01_check_packages.ipynb` to check dependencies, to ensure they are installed under a correct version.
+Run `01_check_packages.ipynb` to check dependencies, ensuring they are installed under a correct version.
 
 **For any other query, please contact the author.**

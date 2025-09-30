@@ -662,7 +662,8 @@ def plot_map(
 
 def plot_transect(
         # Parameter of data
-        depth: xr.DataArray, abscissa: xr.DataArray,
+        depth: xr.DataArray,
+        abscissa: xr.DataArray,
         data: xr.DataArray,
 
         along_lon: bool = False,
@@ -709,7 +710,7 @@ def plot_transect(
         show_plots: bool = False,
 ):
     """
-    Creates a transect
+    Plots 2D data (depth, any) onto a transect.
 
     """
 

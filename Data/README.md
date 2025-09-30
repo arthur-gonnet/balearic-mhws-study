@@ -20,7 +20,7 @@ The data here is meant to be used to compute MHW metrics in the Mediterranean Se
 
 ## How to download external data?
 
-In the GitHub repository, these folders are empty. To get the data used in the study, please download them online, on the Copernicus Marine Data Store (https://data.marine.copernicus.eu/products), or contact the author.
+In the GitHub repository, these folders are empty. To get the data used in the study, please run `Code/02_data_download.ipynb`. The datasets can also be downloaded manually.
 
 Detailed information for downloading each dataset can be found in the `README.md` within its respective folder.
 
@@ -64,4 +64,4 @@ Data/
 
 ## License
 
-This work make use of E.U. Copernicus Marine Service Information; https://doi.org/10.48670/moi-00173; https://doi.org/10.25423/CMCC/MEDSEA_MULTIYEAR_PHY_006_004_E3R1, under a permissive license.
+This work makes use of E.U. Copernicus Marine Service Information; https://doi.org/10.48670/moi-00173; https://doi.org/10.25423/CMCC/MEDSEA_MULTIYEAR_PHY_006_004_E3R1, under a permissive license.
