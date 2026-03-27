@@ -2,8 +2,6 @@
 
 This repository contains all the code used to produce figures for the master thesis entitled “Marine heatwaves in the Balearic Islands region”.
 
-Please note that the repository is not in its final state. Modifications for enhancing the code readability are planned during the whole month of September 2025.
-
 ## Overview
 
 This code is meant to compute and visualise marine heatwaves (MHWs) in the Balearic Islands region. It is intended to provide a reproducible, modular and extensible workflow for:
@@ -12,8 +10,6 @@ This code is meant to compute and visualise marine heatwaves (MHWs) in the Balea
 - Computing MHW metrics using Hobday et al. (2016) definition of MHWs
 - Dask’s chunking, vectorisation, and parallelisation for efficient and adaptive computing
 - Generating figures for reports and presentations
-- Reproducible and modular workflow
-
 
 ## What is in here?
 
